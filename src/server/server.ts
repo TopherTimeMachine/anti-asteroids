@@ -8,6 +8,7 @@ import { ChatMessage, GAME_CONFIG, ServerMessage } from '../shared/types.js';
 import { ChatDatabase } from './db/ChatDatabase.js';
 import { GameState } from './game/GameState.js';
 import { commandProcessor } from './game/CommandProcessor.js';
+import { Player } from './game/Entities.js';
 
 // Resolve directory paths for ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -57,9 +58,13 @@ wss.on('connection', (ws: WebSocket) => {
   const playerId = `p_${connectionIdCounter++}`;
   clients.set(playerId, ws);
 
-  // Assign a default player in the state
-  gameState.addPlayer(playerId, `Player_${playerId.slice(2)}`);
+  // Assign a default player in the state (reset before add so spawn isn't cleared)
   gameState.resetBroadcastState();
+  gameState.addPlayer(playerId, `Player_${playerId.slice(2)}`);
+  const newPlayer = gameState.getPlayersMap().get(playerId);
+  if (newPlayer) {
+    broadcastPlayerSpawn(newPlayer);
+  }
 
   // Initialize client with configuration and their personal ID
   sendToClient(ws, {
@@ -95,8 +100,13 @@ wss.on('connection', (ws: WebSocket) => {
       switch (message.type) {
         case 'join':
           if (message.payload && typeof message.payload.name === 'string') {
-            gameState.removePlayer(playerId); // clean up old name trigger
+            gameState.removePlayer(playerId);
+            broadcastEntityDespawn([playerId]);
             gameState.addPlayer(playerId, message.payload.name);
+            const joinedPlayer = gameState.getPlayersMap().get(playerId);
+            if (joinedPlayer) {
+              broadcastPlayerSpawn(joinedPlayer);
+            }
             broadcastLeaderboard();
           }
           break;
@@ -148,6 +158,7 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('close', () => {
     clients.delete(playerId);
     gameState.removePlayer(playerId);
+    broadcastEntityDespawn([playerId]);
     broadcastLeaderboard();
   });
 
@@ -171,6 +182,18 @@ function broadcast(msg: ServerMessage) {
       ws.send(json);
     }
   });
+}
+
+function broadcastPlayerSpawn(player: Player): void {
+  broadcast({
+    type: 'spawn',
+    payload: { p: [player.serializeCompactSpawn()] },
+  });
+}
+
+function broadcastEntityDespawn(ids: string[]): void {
+  if (ids.length === 0) return;
+  broadcast({ type: 'despawn', payload: { ids } });
 }
 
 // Broadcast leaderboards to all clients

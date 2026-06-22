@@ -160,8 +160,21 @@ export class GameClient {
   private applyPlayerUpdate(update: CompactPlayerUpdate): void {
     const [id, x, y, vx, vy, angle, flags] = update;
     const decoded = decodePlayerFlags(flags);
-    const meta = this.playerMeta.get(id);
-    if (meta) {
+    let meta = this.playerMeta.get(id);
+    if (!meta) {
+      meta = {
+        id,
+        name: id,
+        score: 0,
+        isThrusting: decoded.isThrusting,
+        isAlive: decoded.isAlive,
+        color: '#888888',
+        invulnerable: decoded.invulnerable,
+        invulnerableTimer: 0,
+        respawnTimer: 0,
+      };
+      this.playerMeta.set(id, meta);
+    } else {
       meta.isThrusting = decoded.isThrusting;
       meta.isAlive = decoded.isAlive;
       meta.invulnerable = decoded.invulnerable;
@@ -247,6 +260,9 @@ export class GameClient {
     spawns.p?.forEach((s) => this.applyPlayerSpawn(s));
     spawns.a?.forEach((s) => this.applyAsteroidSpawn(s));
     spawns.b?.forEach((s) => this.applyBulletSpawn(s));
+    if (spawns.p?.length) {
+      this.onPlayerCountChange(this.playerMeta.size);
+    }
   }
 
   private handleSnapshot(payload: SnapshotPayload): void {

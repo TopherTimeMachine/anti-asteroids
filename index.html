@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>👾 ASTRO-RETRO MULTIPLAYER 👾</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/client/style.css">
+</head>
+<body>
+  <!-- CRT Phosphor Screen & Scanlines Effect Overlay -->
+  <div class="crt-overlay"></div>
+  <div class="scanlines"></div>
+
+  <!-- Main Game Cabinet Screen -->
+  <div class="arcade-cabinet">
+    
+    <!-- Top HUD: Lives, Score & Title -->
+    <header class="hud-header">
+      <div class="hud-left">
+        <span class="hud-label">SCORE</span>
+        <span id="player-score" class="hud-value">000000</span>
+      </div>
+      <h1 class="hud-title">ANTI-Asteroids</h1>
+      <div class="hud-right">
+        <button id="sound-toggle" class="btn-sound-toggle" type="button" title="Toggle sound" aria-pressed="false" aria-label="Sound on">🔊</button>
+        <div class="hud-status-group">
+          <span class="hud-label">STATUS</span>
+          <span id="player-status" class="hud-value status-alive">READY</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <div class="game-container">
+      <div class="canvas-container">
+        <canvas id="game-canvas"></canvas>
+      </div>
+
+      <!-- Sidebar containing Leaderboard & Chat -->
+      <aside class="sidebar-right">
+        <!-- Leaderboard (Glassmorphic HUD panel) -->
+        <div class="leaderboard-panel">
+          <h3>🏆 LEADERBOARD</h3>
+          <ul id="leaderboard-list">
+            <li class="empty-leaderboard">Awaiting players...</li>
+          </ul>
+        </div>
+
+        <!-- General Chat Panel -->
+        <div class="chat-panel">
+          <h3>💬 CHAT</h3>
+          <div id="chat-messages" class="chat-messages-container"></div>
+          <form id="chat-form">
+            <input type="text" id="chat-input" maxlength="100" placeholder="TYPE MESSAGE..." required autocomplete="off">
+            <button type="submit" class="btn-chat-send">SEND</button>
+          </form>
+        </div>
+      </aside>
+
+      <!-- Player Count Badge -->
+      <div id="player-count" class="player-count-badge">
+        PLAYERS: 0
+      </div>
+
+      <!-- Connection Status indicator -->
+      <div id="connection-indicator" class="connection-indicator connecting">
+        CONNECTING...
+      </div>
+
+      <!-- Join Screen Modal Overlay (Classic Arcade Style) -->
+      <div id="join-modal" class="join-modal-overlay">
+        <div class="join-box">
+          <div class="pixel-border">
+            <h2 class="blink">INSERT COIN</h2>
+            <p class="subtitle">ENTER YOUR CALLSIGN</p>
+            <form id="join-form">
+              <input type="text" id="player-name" maxlength="12" placeholder="PILOT_NAME" required autocomplete="off">
+              <button type="submit" class="btn-arcade">START MISSION</button>
+            </form>
+            <div class="instructions">
+              <p>⌨ DESKTOP: ARROWS / WASD to fly | SPACE to shoot</p>
+              <p>📱 MOBILE: Use on-screen arcade pad</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Respawn/Spectator Screen Overlay -->
+      <div id="death-overlay" class="death-overlay hidden">
+        <div class="death-box">
+          <h2 class="color-red blink">SHIP DESTROYED</h2>
+          <p id="respawn-countdown">RESPAWNING IN 2...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Virtual Gamepad Controls (Shown only on mobile/touch interfaces) -->
+    <div id="mobile-controls" class="mobile-controls-container">
+      <!-- Left side: D-Pad for Rotation -->
+      <div class="dpad-container">
+        <button id="btn-left" class="btn-control-circle">◀</button>
+        <button id="btn-right" class="btn-control-circle">▶</button>
+      </div>
+      <!-- Right side: Thrust and Fire Action Buttons -->
+      <div class="actions-container">
+        <button id="btn-thrust" class="btn-control-circle btn-thrust-green">▲</button>
+        <button id="btn-shoot" class="btn-control-circle btn-fire-red">FIRE</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/client/main.ts"></script>
+</body>
+</html>

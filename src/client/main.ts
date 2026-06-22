@@ -26,8 +26,11 @@ const chatForm = document.getElementById('chat-form') as HTMLFormElement;
 const chatInput = document.getElementById('chat-input') as HTMLInputElement;
 const chatMessages = document.getElementById('chat-messages') as HTMLElement;
 const soundToggle = document.getElementById('sound-toggle') as HTMLButtonElement;
+const gameVersion = document.getElementById('game-version') as HTMLElement;
 
 const MAX_CHAT_MESSAGES = 50;
+
+gameVersion.textContent = `v${__APP_VERSION__}`;
 
 // Initialize components
 const particles = new ParticleSystem();

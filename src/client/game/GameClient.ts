@@ -490,6 +490,10 @@ export class GameClient {
     });
   }
 
+  public syncInput(): void {
+    this.checkAndSendInputs();
+  }
+
   private checkAndSendInputs(): void {
     if (!this.isConnected || !this.ws) return;
 

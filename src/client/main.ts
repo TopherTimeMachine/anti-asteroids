@@ -193,25 +193,40 @@ function appendChatMessage(msg: ChatMessage): void {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Capture Touch & Mouse Events for Mobile Gamepad buttons
-// We support both to allow testing using mouse clicks inside the browser dev simulator
+// Mobile gamepad: hold-to-act via pointer capture so release is detected even if the finger slides off.
 function setupMobileButton(button: HTMLButtonElement, actionSetter: (state: boolean) => void) {
-  const press = (e: Event) => {
-    e.preventDefault();
-    actionSetter(true);
-  };
-  const release = (e: Event) => {
-    e.preventDefault();
-    actionSetter(false);
+  let activePointerId: number | null = null;
+
+  const setActive = (active: boolean) => {
+    actionSetter(active);
+    client.syncInput();
   };
 
-  button.addEventListener('touchstart', press, { passive: false });
-  button.addEventListener('touchend', release, { passive: false });
-  button.addEventListener('touchcancel', release, { passive: false });
-  
-  button.addEventListener('mousedown', press);
-  button.addEventListener('mouseup', release);
-  button.addEventListener('mouseleave', release);
+  button.addEventListener('pointerdown', (e) => {
+    if (activePointerId !== null) return;
+    e.preventDefault();
+    activePointerId = e.pointerId;
+    button.setPointerCapture(e.pointerId);
+    setActive(true);
+  });
+
+  const release = (e: PointerEvent) => {
+    if (activePointerId !== e.pointerId) return;
+    e.preventDefault();
+    activePointerId = null;
+    if (button.hasPointerCapture(e.pointerId)) {
+      button.releasePointerCapture(e.pointerId);
+    }
+    setActive(false);
+  };
+
+  button.addEventListener('pointerup', release);
+  button.addEventListener('pointercancel', release);
+  button.addEventListener('lostpointercapture', () => {
+    if (activePointerId === null) return;
+    activePointerId = null;
+    setActive(false);
+  });
 }
 
 setupMobileButton(btnLeft, (state) => { client.touchLeft = state; });

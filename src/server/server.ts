@@ -3,7 +3,9 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
+import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
+import { injectLoadCacheBust } from '../shared/loadCacheBust.js';
 import { ChatMessage, GAME_CONFIG, ServerMessage } from '../shared/types.js';
 import { ChatDatabase } from './db/ChatDatabase.js';
 import { GameState } from './game/GameState.js';
@@ -21,13 +23,55 @@ const wss = new WebSocketServer({ noServer: true });
 
 const PORT = process.env.PORT || 3000;
 
-// Serve static client build files
-const clientDistPath = path.resolve(__dirname, '../../dist/client');
-app.use(express.static(clientDistPath));
+const NO_CACHE_EXTENSIONS = new Set(['.html', '.js', '.css', '.mjs']);
 
-// Fallback to index.html for SPA routing
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(clientDistPath, 'index.html'));
+function setNoCacheHeaders(res: express.Response): void {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+}
+
+function shouldDisableCache(filePath: string): boolean {
+  return NO_CACHE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+}
+
+// Serve static client build files (disable caching for HTML/JS/CSS)
+const clientDistPath = path.resolve(__dirname, '../../dist/client');
+
+async function sendIndexHtml(_req: express.Request, res: express.Response): Promise<void> {
+  setNoCacheHeaders(res);
+  try {
+    const raw = await readFile(path.join(clientDistPath, 'index.html'), 'utf-8');
+    res.type('html').send(injectLoadCacheBust(raw));
+  } catch {
+    res.status(500).send('Client build not found. Run npm run build first.');
+  }
+}
+
+app.use(
+  express.static(clientDistPath, {
+    index: false,
+    etag: false,
+    lastModified: false,
+    setHeaders(res, filePath) {
+      if (shouldDisableCache(filePath)) {
+        setNoCacheHeaders(res);
+      }
+    },
+  })
+);
+
+app.get(['/', '/index.html'], (req, res) => {
+  void sendIndexHtml(req, res);
+});
+
+// Fallback to index.html for SPA routes (not static asset paths)
+app.get('*', (req, res, next) => {
+  if (path.extname(req.path)) {
+    next();
+    return;
+  }
+  void sendIndexHtml(req, res);
 });
 
 // Map to track active WebSocket connections to player IDs

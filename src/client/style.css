@@ -640,6 +640,9 @@ body {
   justify-content: center;
   align-items: center;
   cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   border: 3px solid #333;
   background: #15181f;
   color: #fff;

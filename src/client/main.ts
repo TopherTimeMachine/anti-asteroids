@@ -270,7 +270,7 @@ function gameLoop() {
   }
 
   // Draw screen using client interpolated coordinates
-  const state = client.getInterpolatedState();
+  const state = client.getExtrapolatedState();
   renderer.render(
     state.players,
     state.asteroids,

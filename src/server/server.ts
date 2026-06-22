@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -56,6 +57,10 @@ wss.on('connection', (ws: WebSocket) => {
   const playerId = `p_${connectionIdCounter++}`;
   clients.set(playerId, ws);
 
+  // Assign a default player in the state
+  gameState.addPlayer(playerId, `Player_${playerId.slice(2)}`);
+  gameState.resetBroadcastState();
+
   // Initialize client with configuration and their personal ID
   sendToClient(ws, {
     type: 'init',
@@ -64,12 +69,17 @@ wss.on('connection', (ws: WebSocket) => {
       config: {
         fieldWidth: GAME_CONFIG.FIELD_WIDTH,
         fieldHeight: GAME_CONFIG.FIELD_HEIGHT,
+        tickRate: GAME_CONFIG.TICK_RATE,
+        broadcastRate: GAME_CONFIG.BROADCAST_RATE,
       },
     },
   });
 
-  // Assign a default player in the state
-  gameState.addPlayer(playerId, `Player_${playerId.slice(2)}`);
+  // Full world snapshot (bullets extrapolated client-side from spawn events)
+  sendToClient(ws, {
+    type: 'snapshot',
+    payload: gameState.getFullSnapshot(),
+  });
 
   // Send initial leaderboard update
   broadcastLeaderboard();
@@ -234,21 +244,24 @@ function broadcastSystemMessage(text: string) {
 // SERVER GAME LOOP (60 Ticks per second)
 let ticks = 0;
 const tickInterval = 1000 / GAME_CONFIG.TICK_RATE;
+const broadcastEveryNTicks = Math.round(GAME_CONFIG.TICK_RATE / GAME_CONFIG.BROADCAST_RATE);
 
 setInterval(() => {
   gameState.tick();
   ticks++;
 
-  // BROADCAST LOOP (Runs state updates to clients)
-  // We can broadcast state updates at 60 FPS or 30 FPS.
-  // 60 FPS broadcast makes coordinates super-crisp, so let's broadcast every state tick
-  // to avoid jitter and provide a true high-fidelity competitive web experience.
-  broadcast({
-    type: 'state',
-    payload: gameState.getPayload(),
-  });
+  if (ticks % broadcastEveryNTicks === 0) {
+    const delta = gameState.collectDelta();
+    if (delta) {
+      broadcast({ type: 'delta', payload: delta });
+    }
+  }
 
-  // Periodically update leaderboard every 120 ticks (2 seconds) just to stay in sync
+  if (ticks % GAME_CONFIG.FULL_RESYNC_INTERVAL_TICKS === 0) {
+    gameState.resetBroadcastState();
+    broadcast({ type: 'snapshot', payload: gameState.getFullSnapshot() });
+  }
+
   if (ticks % 120 === 0) {
     broadcastLeaderboard();
   }
@@ -256,9 +269,15 @@ setInterval(() => {
 
 // Start Server
 server.listen(PORT, () => {
+  const adminEnabled = Boolean(process.env.ADMIN_PASSWORD);
   console.log(`=============================================`);
   console.log(`🎮 Multi-player Retro Asteroids Server Running`);
   console.log(`📡 URL: http://localhost:${PORT}`);
+  console.log(
+    adminEnabled
+      ? `🔐 Admin: enabled (use /admin <password> in chat)`
+      : `🔓 Admin: disabled (set ADMIN_PASSWORD in .env to enable)`
+  );
   console.log(`=============================================`);
 });
 

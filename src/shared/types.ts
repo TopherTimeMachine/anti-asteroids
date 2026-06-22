@@ -31,7 +31,7 @@ export interface AsteroidData {
   size: number; // 3 = Large, 2 = Medium, 1 = Small
   angle: number;
   angularSpeed: number;
-  shapeSeed: number; // For procedurally drawing retro jagged edges consistently on all clients
+  shapeSeed: number;
 }
 
 export interface BulletData {
@@ -59,7 +59,58 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-export type ServerMessageType = 'init' | 'state' | 'effect' | 'leaderboard' | 'chat' | 'chatHistory';
+/** Compact tuple wire formats (short on the wire) */
+export type CompactPlayerUpdate = [string, number, number, number, number, number, number];
+export type CompactAsteroidCorrection = [string, number, number, number];
+export type CompactAsteroidSpawn = [string, number, number, number, number, number, number, number, number];
+export type CompactBulletSpawn = [string, number, number, number, number, string];
+export type CompactPlayerSpawn = [string, string, string, number, number, number, number, number, number];
+
+export interface GameRuntimeConfig {
+  asteroidMinCount: number;
+  asteroidMaxCount: number;
+  asteroidSplitEnabled: boolean;
+}
+
+export interface SnapshotPayload {
+  tick: number;
+  players: PlayerData[];
+  asteroids: AsteroidData[];
+  config: GameRuntimeConfig;
+}
+
+export interface DeltaPayload {
+  t: number;
+  p?: CompactPlayerUpdate[];
+  a?: CompactAsteroidCorrection[];
+  's+'?: {
+    p?: CompactPlayerSpawn[];
+    a?: CompactAsteroidSpawn[];
+    b?: CompactBulletSpawn[];
+  };
+  's-'?: string[];
+}
+
+export interface SpawnPayload {
+  p?: CompactPlayerSpawn[];
+  a?: CompactAsteroidSpawn[];
+  b?: CompactBulletSpawn[];
+}
+
+export interface DespawnPayload {
+  ids: string[];
+}
+
+export type ServerMessageType =
+  | 'init'
+  | 'snapshot'
+  | 'delta'
+  | 'spawn'
+  | 'despawn'
+  | 'effect'
+  | 'leaderboard'
+  | 'chat'
+  | 'chatHistory';
 
 export interface ServerMessage {
   type: ServerMessageType;
@@ -76,9 +127,18 @@ export const GAME_CONFIG = {
   FIELD_WIDTH: 1600,
   FIELD_HEIGHT: 1200,
   MAX_PLAYERS: 20,
-  TICK_RATE: 60, // 60 ticks per second
-  BROADCAST_RATE: 30, // 30 state broadcasts per second
+  TICK_RATE: 60,
+  BROADCAST_RATE: 15,
+  FULL_RESYNC_INTERVAL_TICKS: 900,
+  POSITION_QUANTIZE: 1,
   ASTEROID_MIN_COUNT: 4,
-  RESPAWN_DELAY_FRAMES: 120, // 2 seconds at 60fps
-  INVULNERABILITY_FRAMES: 180, // 3 seconds at 60fps
+  ASTEROID_MAX_COUNT: 50,
+  RESPAWN_DELAY_FRAMES: 120,
+  INVULNERABILITY_FRAMES: 180,
+  /** Send asteroid position correction every N delta broadcasts */
+  ASTEROID_CORRECTION_INTERVAL: 4,
+  /** Player heartbeat every N delta broadcasts even if unchanged */
+  PLAYER_HEARTBEAT_INTERVAL: 4,
+  /** Position change threshold before including in delta */
+  DELTA_POSITION_THRESHOLD: 2,
 };

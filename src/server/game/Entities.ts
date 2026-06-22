@@ -1,4 +1,16 @@
-import { GAME_CONFIG, PlayerData, AsteroidData, BulletData, PlayerInput } from '../../shared/types.js';
+import {
+  GAME_CONFIG,
+  PlayerData,
+  AsteroidData,
+  BulletData,
+  PlayerInput,
+  CompactPlayerUpdate,
+  CompactAsteroidSpawn,
+  CompactAsteroidCorrection,
+  CompactBulletSpawn,
+  CompactPlayerSpawn,
+} from '../../shared/types.js';
+import { encodePlayerFlags, quantize } from '../../shared/physics.js';
 
 export class Player {
   public id: string;
@@ -19,7 +31,8 @@ export class Player {
   public invulnerableTimer: number = GAME_CONFIG.INVULNERABILITY_FRAMES;
   public respawnTimer: number = 0;
   public shootCooldown: number = 0;
-  
+  public isAdmin: boolean = false;
+
   public inputs: PlayerInput = {
     thrust: false,
     left: false,
@@ -155,6 +168,32 @@ export class Player {
       respawnTimer: this.respawnTimer,
     };
   }
+
+  public serializeCompactUpdate(): CompactPlayerUpdate {
+    return [
+      this.id,
+      quantize(this.x),
+      quantize(this.y),
+      quantize(this.vx * 100) / 100,
+      quantize(this.vy * 100) / 100,
+      Math.round(this.angle * 1000) / 1000,
+      encodePlayerFlags(this.isThrusting, this.isAlive, this.invulnerable),
+    ];
+  }
+
+  public serializeCompactSpawn(): CompactPlayerSpawn {
+    return [
+      this.id,
+      this.name,
+      this.color,
+      quantize(this.x),
+      quantize(this.y),
+      quantize(this.vx * 100) / 100,
+      quantize(this.vy * 100) / 100,
+      Math.round(this.angle * 1000) / 1000,
+      encodePlayerFlags(this.isThrusting, this.isAlive, this.invulnerable),
+    ];
+  }
 }
 
 export class Asteroid {
@@ -224,6 +263,29 @@ export class Asteroid {
       shapeSeed: this.shapeSeed,
     };
   }
+
+  public serializeCompactSpawn(): CompactAsteroidSpawn {
+    return [
+      this.id,
+      quantize(this.x),
+      quantize(this.y),
+      quantize(this.vx * 100) / 100,
+      quantize(this.vy * 100) / 100,
+      this.size,
+      Math.round(this.angle * 1000) / 1000,
+      Math.round(this.angularSpeed * 10000) / 10000,
+      this.shapeSeed,
+    ];
+  }
+
+  public serializeCompactCorrection(): CompactAsteroidCorrection {
+    return [
+      this.id,
+      quantize(this.x),
+      quantize(this.y),
+      Math.round(this.angle * 1000) / 1000,
+    ];
+  }
 }
 
 export class Bullet {
@@ -274,5 +336,16 @@ export class Bullet {
       vy: this.vy,
       ownerId: this.ownerId,
     };
+  }
+
+  public serializeCompactSpawn(): CompactBulletSpawn {
+    return [
+      this.id,
+      quantize(this.x),
+      quantize(this.y),
+      quantize(this.vx * 100) / 100,
+      quantize(this.vy * 100) / 100,
+      this.ownerId,
+    ];
   }
 }

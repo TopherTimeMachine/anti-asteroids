@@ -11,7 +11,8 @@ A real-time multiplayer take on classic Asteroids, built with TypeScript. Fly a 
 - **Retro presentation** — Canvas 2D rendering, CRT-style UI, procedural sound effects
 - **Social** — Live chat and leaderboard sidebar
 - **Mobile-friendly** — On-screen controls for touch devices
-- **Chat commands** — Slash commands for shields, speed, color, and more
+- **Low-bandwidth sync** — 15 Hz compact deltas with client-side dead reckoning for poor connections
+- **Chat commands** — Public `/color` and `/help`; admin commands via `/admin <password>`
 
 ## Quick Start
 
@@ -30,6 +31,22 @@ npm start
 ```
 
 Then open `http://localhost:3000`.
+
+### Admin mode
+
+Set a server password to enable admin slash commands. Create a `.env` file in the project root (loaded automatically on startup):
+
+```env
+ADMIN_PASSWORD=your-secret
+```
+
+Or pass inline:
+
+```bash
+ADMIN_PASSWORD=your-secret npm start
+```
+
+In chat, run `/admin your-secret` to unlock commands like `/maxasteroids`, `/split off`, and `/spawn`.
 
 ## Tech Stack
 

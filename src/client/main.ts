@@ -3,6 +3,7 @@ import { ParticleSystem } from './game/ParticleSystem.js';
 import { GameClient } from './game/GameClient.js';
 import { ChatMessage } from '../shared/types.js';
 import { audioSynthesizer } from './game/AudioSynthesizer.js';
+import { getSavedPlayerName, hasSavedPlayerName, savePlayerName } from './playerNameStorage.js';
 
 // DOM Element references
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -25,12 +26,39 @@ const btnShoot = document.getElementById('btn-shoot') as HTMLButtonElement;
 const chatForm = document.getElementById('chat-form') as HTMLFormElement;
 const chatInput = document.getElementById('chat-input') as HTMLInputElement;
 const chatMessages = document.getElementById('chat-messages') as HTMLElement;
+const mobileChatMessages = document.getElementById('mobile-chat-messages') as HTMLElement;
+const mobileChatOpenBtn = document.getElementById('mobile-chat-open') as HTMLButtonElement;
+const mobileChatModal = document.getElementById('mobile-chat-modal') as HTMLElement;
+const mobileChatForm = document.getElementById('mobile-chat-form') as HTMLFormElement;
+const mobileChatInput = document.getElementById('mobile-chat-input') as HTMLInputElement;
+const mobileChatCancelBtn = document.getElementById('mobile-chat-cancel') as HTMLButtonElement;
 const soundToggle = document.getElementById('sound-toggle') as HTMLButtonElement;
 const gameVersion = document.getElementById('game-version') as HTMLElement;
 
 const MAX_CHAT_MESSAGES = 50;
+const MOBILE_CHAT_VISIBLE = 3;
 
 gameVersion.textContent = `v${__APP_VERSION__}`;
+
+function joinWithName(name: string): void {
+  savePlayerName(name);
+  client.join(name);
+  joinModal.classList.add('hidden');
+  handleResize();
+}
+
+function tryAutoJoin(): void {
+  const savedName = getSavedPlayerName();
+  if (savedName) {
+    joinWithName(savedName);
+  }
+}
+
+const savedPlayerName = getSavedPlayerName();
+if (savedPlayerName) {
+  playerNameInput.value = savedPlayerName;
+  joinModal.classList.add('hidden');
+}
 
 // Initialize components
 const particles = new ParticleSystem();
@@ -82,11 +110,13 @@ const client = new GameClient(particles, {
       connectionIndicator.textContent = 'CONNECTING...';
     } else if (status === 'connected') {
       connectionIndicator.textContent = 'ONLINE';
+      tryAutoJoin();
     } else {
       connectionIndicator.textContent = 'OFFLINE';
       particles.clear();
-      // Show join modal on disconnect
-      joinModal.classList.remove('hidden');
+      if (!hasSavedPlayerName()) {
+        joinModal.classList.remove('hidden');
+      }
     }
   },
 
@@ -154,16 +184,25 @@ function formatChatTimestamp(timestamp: number): string {
 
 function clearChatMessages(): void {
   chatMessages.innerHTML = '';
+  mobileChatMessages.innerHTML = '';
 }
 
-function appendChatMessage(msg: ChatMessage): void {
+function trimChatContainer(container: HTMLElement, maxMessages: number): void {
+  while (container.children.length > maxMessages) {
+    container.removeChild(container.firstChild!);
+  }
+}
+
+function createChatMessageElement(msg: ChatMessage, compact = false): HTMLDivElement {
   const div = document.createElement('div');
   div.className = msg.isSystem ? 'chat-msg system-msg' : 'chat-msg';
 
-  const timeSpan = document.createElement('span');
-  timeSpan.className = 'msg-timestamp';
-  timeSpan.textContent = `[${formatChatTimestamp(msg.timestamp)}] `;
-  div.appendChild(timeSpan);
+  if (!compact) {
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'msg-timestamp';
+    timeSpan.textContent = `[${formatChatTimestamp(msg.timestamp)}] `;
+    div.appendChild(timeSpan);
+  }
 
   if (msg.isSystem) {
     const textSpan = document.createElement('span');
@@ -184,13 +223,47 @@ function appendChatMessage(msg: ChatMessage): void {
     div.appendChild(textSpan);
   }
 
-  chatMessages.appendChild(div);
+  return div;
+}
 
-  while (chatMessages.children.length > MAX_CHAT_MESSAGES) {
-    chatMessages.removeChild(chatMessages.firstChild!);
+function appendChatMessage(msg: ChatMessage): void {
+  chatMessages.appendChild(createChatMessageElement(msg));
+  trimChatContainer(chatMessages, MAX_CHAT_MESSAGES);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  mobileChatMessages.appendChild(createChatMessageElement(msg, true));
+  trimChatContainer(mobileChatMessages, MOBILE_CHAT_VISIBLE);
+}
+
+function sendChatText(text: string, ...inputs: HTMLInputElement[]): void {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+
+  if (trimmed.toLowerCase() === '/clear') {
+    clearChatMessages();
+    inputs.forEach((input) => {
+      input.value = '';
+    });
+    return;
   }
 
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  client.sendChatMessage(trimmed);
+  inputs.forEach((input) => {
+    input.value = '';
+  });
+}
+
+function openMobileChatModal(): void {
+  mobileChatModal.classList.remove('hidden');
+  mobileChatModal.setAttribute('aria-hidden', 'false');
+  mobileChatInput.value = '';
+  requestAnimationFrame(() => mobileChatInput.focus());
+}
+
+function closeMobileChatModal(): void {
+  mobileChatModal.classList.add('hidden');
+  mobileChatModal.setAttribute('aria-hidden', 'true');
+  mobileChatInput.value = '';
 }
 
 // Mobile gamepad: hold-to-act via pointer capture so release is detected even if the finger slides off.
@@ -257,17 +330,27 @@ handleResize(); // Initial call
 // Chat form handler
 chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const text = chatInput.value.trim();
-  if (!text) return;
+  sendChatText(chatInput.value, chatInput);
+});
 
-  if (text.toLowerCase() === '/clear') {
-    clearChatMessages();
-    chatInput.value = '';
-    return;
+mobileChatOpenBtn.addEventListener('click', () => {
+  openMobileChatModal();
+});
+
+mobileChatCancelBtn.addEventListener('click', () => {
+  closeMobileChatModal();
+});
+
+mobileChatModal.addEventListener('click', (e) => {
+  if (e.target === mobileChatModal) {
+    closeMobileChatModal();
   }
+});
 
-  client.sendChatMessage(text);
-  chatInput.value = '';
+mobileChatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  sendChatText(mobileChatInput.value, mobileChatInput, chatInput);
+  closeMobileChatModal();
 });
 
 // Join button form handler
@@ -275,9 +358,7 @@ joinForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const name = playerNameInput.value.trim();
   if (name) {
-    client.join(name);
-    joinModal.classList.add('hidden');
-    handleResize(); // Re-trigger canvas alignment after layout changes
+    joinWithName(name);
   }
 });
 
@@ -301,5 +382,8 @@ function gameLoop() {
 }
 
 // Start Client connection and animation loop
+if (savedPlayerName) {
+  client.join(savedPlayerName);
+}
 client.connect();
 requestAnimationFrame(gameLoop);

@@ -100,6 +100,26 @@
           <p id="respawn-countdown">RESPAWNING IN 2...</p>
         </div>
       </div>
+
+      <!-- Mobile chat preview + compose button -->
+      <div id="mobile-chat" class="mobile-chat">
+        <div id="mobile-chat-messages" class="mobile-chat-messages"></div>
+        <button id="mobile-chat-open" class="mobile-chat-open-btn" type="button" aria-label="Open chat">💬 CHAT</button>
+      </div>
+
+      <!-- Mobile chat compose dialog -->
+      <div id="mobile-chat-modal" class="mobile-chat-modal hidden" aria-hidden="true">
+        <div class="mobile-chat-dialog">
+          <h3>SEND MESSAGE</h3>
+          <form id="mobile-chat-form">
+            <input type="text" id="mobile-chat-input" maxlength="100" placeholder="TYPE MESSAGE..." required autocomplete="off">
+            <div class="mobile-chat-dialog-actions">
+              <button id="mobile-chat-cancel" class="btn-mobile-chat-cancel" type="button">CANCEL</button>
+              <button class="btn-mobile-chat-send" type="submit">SEND</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- Mobile Virtual Gamepad Controls (Shown only on mobile/touch interfaces) -->

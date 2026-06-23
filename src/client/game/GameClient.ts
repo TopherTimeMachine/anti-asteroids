@@ -101,14 +101,19 @@ export class GameClient {
     this.ws.send(JSON.stringify({ type: 'chat', payload: { text: trimmed } }));
   }
 
+  private pendingJoinName: string | null = null;
+
   public connect(): void {
     this.onConnectionStatusChange('connecting');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
+    const host = import.meta.env.DEV
+      ? `${window.location.hostname}:3000`
+      : window.location.host;
     this.ws = new WebSocket(`${protocol}//${host}`);
 
     this.ws.onopen = () => {
       this.isConnected = true;
+      this.flushJoin();
       this.onConnectionStatusChange('connected');
     };
 
@@ -122,10 +127,17 @@ export class GameClient {
   }
 
   public join(name: string): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: 'join', payload: { name } }));
-      audioSynthesizer.init();
-    }
+    const trimmed = name.trim().slice(0, 12);
+    if (!trimmed) return;
+    this.pendingJoinName = trimmed;
+    this.flushJoin();
+  }
+
+  private flushJoin(): void {
+    if (!this.pendingJoinName || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ type: 'join', payload: { name: this.pendingJoinName } }));
+    this.pendingJoinName = null;
+    audioSynthesizer.init();
   }
 
   private now(): number {

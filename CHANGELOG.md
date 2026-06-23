@@ -1,3 +1,8 @@
+## 1.0.3
+
+- remember names
+
+
 ## 1.0.2
 
 - mobile button press fix

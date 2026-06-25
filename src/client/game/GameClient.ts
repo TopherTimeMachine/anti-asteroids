@@ -102,8 +102,14 @@ export class GameClient {
   }
 
   private pendingJoinName: string | null = null;
+  private joinedName: string | null = null;
 
   public connect(): void {
+    if (!this.pendingJoinName && !this.joinedName) return;
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+      return;
+    }
+
     this.onConnectionStatusChange('connecting');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = import.meta.env.DEV
@@ -121,7 +127,10 @@ export class GameClient {
     this.ws.onclose = () => {
       this.isConnected = false;
       this.onConnectionStatusChange('disconnected');
-      setTimeout(() => this.connect(), 3000);
+      if (this.joinedName) {
+        this.pendingJoinName = this.joinedName;
+        setTimeout(() => this.connect(), 3000);
+      }
     };
     this.ws.onerror = (err) => console.error('WebSocket connection error:', err);
   }
@@ -129,8 +138,12 @@ export class GameClient {
   public join(name: string): void {
     const trimmed = name.trim().slice(0, 12);
     if (!trimmed) return;
+    this.joinedName = trimmed;
     this.pendingJoinName = trimmed;
     this.flushJoin();
+    if (!this.isConnected) {
+      this.connect();
+    }
   }
 
   private flushJoin(): void {

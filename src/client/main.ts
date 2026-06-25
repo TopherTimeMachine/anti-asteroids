@@ -47,17 +47,9 @@ function joinWithName(name: string): void {
   handleResize();
 }
 
-function tryAutoJoin(): void {
-  const savedName = getSavedPlayerName();
-  if (savedName) {
-    joinWithName(savedName);
-  }
-}
-
 const savedPlayerName = getSavedPlayerName();
 if (savedPlayerName) {
   playerNameInput.value = savedPlayerName;
-  joinModal.classList.add('hidden');
 }
 
 // Initialize components
@@ -110,7 +102,6 @@ const client = new GameClient(particles, {
       connectionIndicator.textContent = 'CONNECTING...';
     } else if (status === 'connected') {
       connectionIndicator.textContent = 'ONLINE';
-      tryAutoJoin();
     } else {
       connectionIndicator.textContent = 'OFFLINE';
       particles.clear();
@@ -381,9 +372,5 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// Start Client connection and animation loop
-if (savedPlayerName) {
-  client.join(savedPlayerName);
-}
-client.connect();
+// Start animation loop; WebSocket connects when the join form is submitted
 requestAnimationFrame(gameLoop);

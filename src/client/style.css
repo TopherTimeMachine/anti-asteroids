@@ -616,6 +616,11 @@ body {
   text-shadow: 0 0 10px rgba(255, 49, 49, 0.8);
 }
 
+/* Mobile play hint (between canvas and controls) */
+.mobile-play-hint {
+  display: none;
+}
+
 /* Mobile Controls Styling */
 .mobile-controls-container {
   display: none; /* Hidden by default on desktop */
@@ -921,8 +926,23 @@ body {
 
 /* Mobile / touch UI: narrow viewport OR coarse (touch) pointer */
 @media (max-width: 768px), (pointer: coarse) {
+  .mobile-play-hint {
+    display: block;
+    flex-shrink: 0;
+    text-align: center;
+    padding: 8px 12px 6px;
+    font-size: 7px;
+    line-height: 1.4;
+    letter-spacing: 0.5px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 6px rgba(0, 255, 255, 0.35);
+    background-color: #080a0d;
+    border-top: 2px dashed rgba(0, 255, 255, 0.25);
+  }
+
   .mobile-controls-container {
     display: flex;
+    border-top: none;
   }
   .sidebar-right {
     display: none;

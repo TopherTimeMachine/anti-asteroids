@@ -282,13 +282,13 @@ export class GameRenderer {
       // Label color matches spaceship, bolding local player
       const isLocal = p.id === localPlayerId;
       this.ctx.fillStyle = isLocal ? '#ffffff' : p.color;
-      this.ctx.font = '7px "Press Start 2P"';
+      this.ctx.font = '35px "Press Start 2P"';
       this.ctx.textAlign = 'center';
       
       let labelText = p.name;
       if (isLocal) labelText = `▶ ${labelText} ◀`;
       
-      this.ctx.fillText(labelText, 0, -22 * GAME_CONFIG.SHIP_VISUAL_SCALE);
+      this.ctx.fillText(labelText, 0, -22 * GAME_CONFIG.SHIP_VISUAL_SCALE - 28);
       this.ctx.restore();
     }
   }

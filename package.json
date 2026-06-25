@@ -1,9 +1,12 @@
 {
   "name": "anti-Asteroids",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Multiplayer retro 8-bit Asteroids game using WebSockets and TypeScript",
   "main": "dist/server/server.js",
   "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev:client": "vite",
     "dev:server": "tsx watch src/server/server.ts",

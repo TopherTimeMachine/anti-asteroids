@@ -29,12 +29,14 @@ const chatInput = document.getElementById('chat-input') as HTMLInputElement;
 const chatMessages = document.getElementById('chat-messages') as HTMLElement;
 const mobileChatMessages = document.getElementById('mobile-chat-messages') as HTMLElement;
 const mobileChatOpenBtn = document.getElementById('mobile-chat-open') as HTMLButtonElement;
-const mobileChatModal = document.getElementById('mobile-chat-modal') as HTMLElement;
-const mobileChatForm = document.getElementById('mobile-chat-form') as HTMLFormElement;
-const mobileChatInput = document.getElementById('mobile-chat-input') as HTMLInputElement;
-const mobileChatCancelBtn = document.getElementById('mobile-chat-cancel') as HTMLButtonElement;
+const mobileChatView = document.getElementById('mobile-chat-view') as HTMLElement;
+const mobileChatViewMessages = document.getElementById('mobile-chat-view-messages') as HTMLElement;
+const mobileChatViewForm = document.getElementById('mobile-chat-view-form') as HTMLFormElement;
+const mobileChatViewInput = document.getElementById('mobile-chat-view-input') as HTMLInputElement;
+const mobileChatCloseBtn = document.getElementById('mobile-chat-close') as HTMLButtonElement;
 const soundToggle = document.getElementById('sound-toggle') as HTMLButtonElement;
 const gameVersion = document.getElementById('game-version') as HTMLElement;
+const viewportWidth = document.getElementById('viewport-width') as HTMLElement;
 
 const MAX_CHAT_MESSAGES = 50;
 const MOBILE_CHAT_VISIBLE = 3;
@@ -177,6 +179,7 @@ function formatChatTimestamp(timestamp: number): string {
 function clearChatMessages(): void {
   chatMessages.innerHTML = '';
   mobileChatMessages.innerHTML = '';
+  mobileChatViewMessages.innerHTML = '';
 }
 
 function trimChatContainer(container: HTMLElement, maxMessages: number): void {
@@ -225,6 +228,12 @@ function appendChatMessage(msg: ChatMessage): void {
 
   mobileChatMessages.appendChild(createChatMessageElement(msg, true));
   trimChatContainer(mobileChatMessages, MOBILE_CHAT_VISIBLE);
+
+  mobileChatViewMessages.appendChild(createChatMessageElement(msg));
+  trimChatContainer(mobileChatViewMessages, MAX_CHAT_MESSAGES);
+  if (!mobileChatView.classList.contains('hidden')) {
+    mobileChatViewMessages.scrollTop = mobileChatViewMessages.scrollHeight;
+  }
 }
 
 function sendChatText(text: string, ...inputs: HTMLInputElement[]): void {
@@ -245,17 +254,64 @@ function sendChatText(text: string, ...inputs: HTMLInputElement[]): void {
   });
 }
 
-function openMobileChatModal(): void {
-  mobileChatModal.classList.remove('hidden');
-  mobileChatModal.setAttribute('aria-hidden', 'false');
-  mobileChatInput.value = '';
-  requestAnimationFrame(() => mobileChatInput.focus());
+function focusMobileChatInput(): void {
+  const input = mobileChatViewInput;
+  input.focus({ preventScroll: true });
+  try {
+    input.setSelectionRange(input.value.length, input.value.length);
+  } catch {
+    // setSelectionRange can throw on some input states in Safari
+  }
 }
 
-function closeMobileChatModal(): void {
-  mobileChatModal.classList.add('hidden');
-  mobileChatModal.setAttribute('aria-hidden', 'true');
-  mobileChatInput.value = '';
+const MOBILE_CHAT_MAX_HEIGHT = 420;
+
+function resetMobileChatLayout(): void {
+  mobileChatView.style.top = '';
+}
+
+function updateMobileChatLayout(): void {
+  if (mobileChatView.classList.contains('hidden')) {
+    resetMobileChatLayout();
+    return;
+  }
+
+  const container = mobileChatView.parentElement;
+  const vv = window.visualViewport;
+  if (!container || !vv) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const visibleTop = Math.max(containerRect.top, vv.offsetTop);
+  const visibleBottom = Math.min(containerRect.bottom, vv.offsetTop + vv.height);
+
+  // Keep 420px height; slide panel up so the input stays above the keyboard
+  let topInContainer = visibleBottom - containerRect.top - MOBILE_CHAT_MAX_HEIGHT;
+  const minTop = visibleTop - containerRect.top + 8;
+  if (topInContainer < minTop) {
+    topInContainer = minTop;
+  }
+  mobileChatView.style.top = `${Math.max(0, topInContainer)}px`;
+}
+
+function openMobileChatView(): void {
+  mobileChatView.classList.remove('hidden');
+  mobileChatView.setAttribute('aria-hidden', 'false');
+  updateMobileChatLayout();
+  mobileChatViewMessages.scrollTop = mobileChatViewMessages.scrollHeight;
+  focusMobileChatInput();
+}
+
+function closeMobileChatView(): void {
+  mobileChatView.classList.add('hidden');
+  mobileChatView.setAttribute('aria-hidden', 'true');
+  mobileChatViewInput.blur();
+  mobileChatViewInput.value = '';
+  resetMobileChatLayout();
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateMobileChatLayout);
+  window.visualViewport.addEventListener('scroll', updateMobileChatLayout);
 }
 
 // Mobile gamepad: hold-to-act via pointer capture so release is detected even if the finger slides off.
@@ -315,6 +371,7 @@ soundToggle.addEventListener('click', () => {
 // Resize handler
 function handleResize() {
   renderer.resize(window.innerWidth, window.innerHeight);
+  viewportWidth.textContent = `${window.innerWidth}px`;
 }
 window.addEventListener('resize', handleResize);
 handleResize(); // Initial call
@@ -325,24 +382,30 @@ chatForm.addEventListener('submit', (e) => {
   sendChatText(chatInput.value, chatInput);
 });
 
-mobileChatOpenBtn.addEventListener('click', () => {
-  openMobileChatModal();
-});
+let mobileChatOpenedByTouch = false;
 
-mobileChatCancelBtn.addEventListener('click', () => {
-  closeMobileChatModal();
-});
-
-mobileChatModal.addEventListener('click', (e) => {
-  if (e.target === mobileChatModal) {
-    closeMobileChatModal();
-  }
-});
-
-mobileChatForm.addEventListener('submit', (e) => {
+mobileChatOpenBtn.addEventListener('touchend', (e) => {
   e.preventDefault();
-  sendChatText(mobileChatInput.value, mobileChatInput, chatInput);
-  closeMobileChatModal();
+  mobileChatOpenedByTouch = true;
+  openMobileChatView();
+}, { passive: false });
+
+mobileChatOpenBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (mobileChatOpenedByTouch) {
+    mobileChatOpenedByTouch = false;
+    return;
+  }
+  openMobileChatView();
+});
+
+mobileChatCloseBtn.addEventListener('click', () => {
+  closeMobileChatView();
+});
+
+mobileChatViewForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  sendChatText(mobileChatViewInput.value, mobileChatViewInput, chatInput);
 });
 
 // Join button form handler

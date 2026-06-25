@@ -1,9 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
-import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { injectLoadCacheBust } from './src/shared/loadCacheBust.ts';
-
-const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 function loadCacheBustPlugin(): Plugin {
   return {
@@ -19,9 +16,6 @@ function loadCacheBustPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [loadCacheBustPlugin()],
-  define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
-  },
   root: '.',
   build: {
     outDir: 'dist/client',

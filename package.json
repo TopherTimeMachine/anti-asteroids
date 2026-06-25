@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev:client": "vite",
-    "dev:server": "tsx watch src/server/server.ts",
+    "dev:server": "NODE_ENV=development tsx watch src/server/server.ts",
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
     "build:client": "tsc -p tsconfig.client.json && vite build",
     "build:server": "tsc -p tsconfig.server.json",

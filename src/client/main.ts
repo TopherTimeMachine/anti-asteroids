@@ -4,6 +4,7 @@ import { GameClient } from './game/GameClient.js';
 import { ChatMessage } from '../shared/types.js';
 import { audioSynthesizer } from './game/AudioSynthesizer.js';
 import { getSavedPlayerName, hasSavedPlayerName, savePlayerName } from './playerNameStorage.js';
+import packageJson from '../../package.json' with { type: 'json' };
 
 // DOM Element references
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -38,7 +39,7 @@ const gameVersion = document.getElementById('game-version') as HTMLElement;
 const MAX_CHAT_MESSAGES = 50;
 const MOBILE_CHAT_VISIBLE = 3;
 
-gameVersion.textContent = `v${__APP_VERSION__}`;
+gameVersion.textContent = `v${packageJson.version}`;
 
 function joinWithName(name: string): void {
   savePlayerName(name);

@@ -142,8 +142,13 @@ export class GameRenderer {
       this.ctx.fillStyle = color;
       this.ctx.shadowColor = color;
       
-      // Draw bullet as 8bit retro block (3x3 pixels)
-      this.ctx.fillRect(bullet.x - 2, bullet.y - 2, 4, 4);
+      const half = GAME_CONFIG.BULLET_VISUAL_SIZE / 2;
+      this.ctx.fillRect(
+        bullet.x - half,
+        bullet.y - half,
+        GAME_CONFIG.BULLET_VISUAL_SIZE,
+        GAME_CONFIG.BULLET_VISUAL_SIZE
+      );
     }
     this.ctx.restore();
   }
@@ -226,7 +231,9 @@ export class GameRenderer {
       this.ctx.shadowColor = p.color;
       this.ctx.shadowBlur = 6;
 
-      // Draw standard retro wedge ship path
+      this.ctx.scale(GAME_CONFIG.SHIP_VISUAL_SCALE, GAME_CONFIG.SHIP_VISUAL_SCALE);
+
+      // Draw standard retro wedge ship path (base unit coords, scaled above)
       this.ctx.beginPath();
       this.ctx.moveTo(15, 0);       // Nose
       this.ctx.lineTo(-12, -10);    // Back left
@@ -281,7 +288,7 @@ export class GameRenderer {
       let labelText = p.name;
       if (isLocal) labelText = `▶ ${labelText} ◀`;
       
-      this.ctx.fillText(labelText, 0, -22);
+      this.ctx.fillText(labelText, 0, -22 * GAME_CONFIG.SHIP_VISUAL_SCALE);
       this.ctx.restore();
     }
   }

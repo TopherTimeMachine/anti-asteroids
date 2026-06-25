@@ -44,7 +44,7 @@ export class Player {
   private drag = 0.985;
   public thrustAcc = 0.15;
   private rotationSpeed = 0.07; // Radians per frame
-  public radius = 15;
+  public radius = GAME_CONFIG.SHIP_RADIUS;
 
   constructor(id: string, name: string) {
     this.id = id;
@@ -296,14 +296,14 @@ export class Bullet {
   public vy: number;
   public ownerId: string;
   public lifespan: number = 90; // 1.5 seconds at 60fps
-  public radius = 3;
+  public radius = GAME_CONFIG.BULLET_RADIUS;
 
   constructor(id: string, ownerId: string, x: number, y: number, angle: number, ownerVx: number, ownerVy: number) {
     this.id = id;
     this.ownerId = ownerId;
     
     // Bullet starts at the tip of the spaceship
-    const tipDistance = 15;
+    const tipDistance = GAME_CONFIG.SHIP_RADIUS;
     this.x = x + Math.cos(angle) * tipDistance;
     this.y = y + Math.sin(angle) * tipDistance;
     

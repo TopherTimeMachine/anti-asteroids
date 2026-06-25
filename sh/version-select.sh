@@ -8,18 +8,8 @@ get_current_version() {
 
 # Function to update version in package.json example: "version": "0.1.113",
 update_version() {
-    old_version=$(get_current_version)
     new_version=$1
-    # Check if running on macOS
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS requires an extension with -i flag
-        # replace old version with new version "version": "0.1.113",
-        sed -i '' "s/\"version\": \"$old_version\"/\"version\": \"$new_version\"/" package.json
-    else
-        # Linux version
-        sed -i "s/\"version\": \"$old_version\"/\"version\": \"$new_version\"/" package.json
-    fi
-    if [ $? -ne 0 ]; then
+    if ! npm version "$new_version" --no-git-tag-version; then
         echo "Failed to update package.json version. Exiting."
         exit 1
     fi

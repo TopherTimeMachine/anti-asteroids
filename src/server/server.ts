@@ -22,6 +22,8 @@ const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
 const PORT = process.env.PORT || 3000;
+const IS_DEV = process.env.NODE_ENV === 'development';
+const VITE_DEV_URL = process.env.VITE_DEV_URL || 'http://localhost:5173';
 
 const NO_CACHE_EXTENSIONS = new Set(['.html', '.js', '.css', '.mjs']);
 
@@ -48,31 +50,42 @@ async function sendIndexHtml(_req: express.Request, res: express.Response): Prom
   }
 }
 
-app.use(
-  express.static(clientDistPath, {
-    index: false,
-    etag: false,
-    lastModified: false,
-    setHeaders(res, filePath) {
-      if (shouldDisableCache(filePath)) {
-        setNoCacheHeaders(res);
-      }
-    },
-  })
-);
+if (IS_DEV) {
+  // Dev client is served by Vite (live source + HMR). Port 3000 is WebSocket/API only.
+  app.get(['/', '/index.html', '*'], (req, res, next) => {
+    if (path.extname(req.path)) {
+      next();
+      return;
+    }
+    res.redirect(VITE_DEV_URL);
+  });
+} else {
+  app.use(
+    express.static(clientDistPath, {
+      index: false,
+      etag: false,
+      lastModified: false,
+      setHeaders(res, filePath) {
+        if (shouldDisableCache(filePath)) {
+          setNoCacheHeaders(res);
+        }
+      },
+    })
+  );
 
-app.get(['/', '/index.html'], (req, res) => {
-  void sendIndexHtml(req, res);
-});
+  app.get(['/', '/index.html'], (req, res) => {
+    void sendIndexHtml(req, res);
+  });
 
-// Fallback to index.html for SPA routes (not static asset paths)
-app.get('*', (req, res, next) => {
-  if (path.extname(req.path)) {
-    next();
-    return;
-  }
-  void sendIndexHtml(req, res);
-});
+  // Fallback to index.html for SPA routes (not static asset paths)
+  app.get('*', (req, res, next) => {
+    if (path.extname(req.path)) {
+      next();
+      return;
+    }
+    void sendIndexHtml(req, res);
+  });
+}
 
 // Map to track active WebSocket connections to player IDs
 const clients = new Map<string, WebSocket>();
@@ -339,7 +352,12 @@ server.listen(PORT, () => {
   const adminEnabled = Boolean(process.env.ADMIN_PASSWORD);
   console.log(`=============================================`);
   console.log(`🎮 Multi-player Retro Asteroids Server Running`);
-  console.log(`📡 URL: http://localhost:${PORT}`);
+  if (IS_DEV) {
+    console.log(`🕹️  Play: ${VITE_DEV_URL}`);
+    console.log(`📡 WebSocket server: http://localhost:${PORT}`);
+  } else {
+    console.log(`📡 URL: http://localhost:${PORT}`);
+  }
   console.log(
     adminEnabled
       ? `🔐 Admin: enabled (use /admin <password> in chat)`

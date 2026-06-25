@@ -141,4 +141,8 @@ export const GAME_CONFIG = {
   PLAYER_HEARTBEAT_INTERVAL: 4,
   /** Position change threshold before including in delta */
   DELTA_POSITION_THRESHOLD: 2,
+  SHIP_RADIUS: 150,
+  BULLET_RADIUS: 30,
+  SHIP_VISUAL_SCALE: 10,
+  BULLET_VISUAL_SIZE: 40,
 };
